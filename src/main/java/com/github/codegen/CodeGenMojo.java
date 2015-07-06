@@ -43,6 +43,7 @@ import org.twdata.maven.mojoexecutor.MojoExecutor;
 import org.twdata.maven.mojoexecutor.PlexusConfigurationUtils;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -74,14 +75,11 @@ public class CodeGenMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.basedir}/src/codegen/java", required = true)
     private File codegenSourceDirectory;
 
+    @Parameter(defaultValue = "true", required = true)
+    private boolean replace;
+
     @Parameter
     private List<Resource> codegenResources;
-
-    /**
-     * The source directories containing the sources to be compiled.
-     */
-    @Parameter(defaultValue = "${project.build.sourceDirectory}", readonly = true, required = true)
-    private String sourceDirectory;
 
     @Parameter
     private CompilerMojo compilation;
@@ -109,7 +107,9 @@ public class CodeGenMojo extends AbstractMojo {
         copyResources();
         compile();
         process();
-        removePath(mavenProject.getCompileSourceRoots(), sourceDirectory.toString());
+        if(replace) {
+            mavenProject.getCompileSourceRoots().clear();
+        }
         mavenProject.addCompileSourceRoot(generationDirectory.toString());
     }
 
@@ -152,7 +152,18 @@ public class CodeGenMojo extends AbstractMojo {
         }
 
         Xpp3Dom srcFolder = new Xpp3Dom("srcFolder");
-        srcFolder.setValue(this.sourceDirectory.toString());
+        StringBuilder stringBuilder = new StringBuilder();
+        List<String> compileSourceRoots = mavenProject.getCompileSourceRoots();
+        Iterator<String> iterator = compileSourceRoots.iterator();
+        int i = 0;
+        while(iterator.hasNext()) {
+            if(i != 0) {
+                stringBuilder.append(File.pathSeparatorChar);
+            }
+            stringBuilder.append(iterator.next());
+            ++i;
+        }
+        srcFolder.setValue(stringBuilder.toString());
         pluginConfiguration.addChild(srcFolder);
 
         Xpp3Dom outFolder = new Xpp3Dom("outFolder");
